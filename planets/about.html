@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Me</title>
+    <style>
+        /* Set the background image for the entire page */
+        body {
+            background-image: url('../assets/2150.jpg'); /* Replace with the path to your image */
+            background-size: cover; /* Ensure the image covers the entire page */
+            background-position: center; /* Center the image */
+            background-attachment: fixed; /* Make the background fixed during scrolling */
+            height: 100vh; /* Ensure the body takes up the full height of the viewport */
+            margin: 0; /* Remove default margin */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white; /* Set text color to white */
+        }
+
+        /* Style for content */
+        .content {
+            height: 600px;
+            width: 80%;
+            max-width: 1200px;
+            text-align: center;
+            font-size: 1.2em;
+            font-family: Arial, sans-serif;
+            background-color: rgba(0, 0, 0, 0.6); /* Optional: add a semi-transparent background behind text */
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .details {
+            flex: 1;
+            padding: 20px;
+            text-align: left;
+            color: #fff;
+        }
+
+        .details h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #00bcd4;
+        }
+
+        .details p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+
+        .planet {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            max-width: 350px;
+            max-height: 350px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            border-radius: 50%;
+        }
+
+        /* Style for back button */
+        .back-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            color: white;
+            background-color: #00bcd4;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .back-button:hover {
+            background-color: #0097a7;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div class="container">
+            <div class="details">
+                <h1>About Me</h1>
+                <p>
+                    Welcome to my virtual portfolio! My name is [Your Name], and I am passionate about merging technology and creativity to build impactful solutions.
+                </p>
+                <p>
+                    With expertise in computer science and a strong interest in fintech, I enjoy solving challenging problems and creating applications that make a difference.
+                </p>
+                <p>
+                    In my free time, I delve into learning new technologies, play basketball, and participate in Model United Nations conferences to hone my communication skills.
+                </p>
+            </div>
+            <div class="planet">
+                <canvas id="planet-canvas"></canvas>
+            </div>
+        </div>
+        <!-- Back button to navigate to the main page -->
+        <button class="back-button" onclick="window.location.href = '../index.html';">Back to Main Page</button>
+    </div>
+
+    <script type="module">
+        // Planet rotation using Three.js
+        import * as THREE from 'three';
+
+        const canvas = document.querySelector('#planet-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        const geometry = new THREE.SphereGeometry(2, 32, 32);
+
+        // Load texture
+        const textureLoader = new THREE.TextureLoader();
+        const texture = textureLoader.load('../assets/planet1.jpg');  // Path to your texture file
+
+        const material = new THREE.MeshStandardMaterial({
+            map: texture,  // Apply texture to the material
+            metalness: 0.5,
+            roughness: 0.5
+        });
+
+        const sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);  // Reduced from 0.5
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);  // Reduced from 1.0
+        directionalLight.position.set(10, 10, 10);
+        scene.add(directionalLight);
+
+        function animate() {
+            sphere.rotation.y += 0.01;
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

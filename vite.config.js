@@ -1,5 +1,6 @@
+// vite.config.js
 export default {
-    server: {
-      open: true
-    }
-  }
+  build: {
+    chunkSizeWarningLimit: 1000, // Increase the warning threshold to 1000 KB (1 MB)
+  },
+}

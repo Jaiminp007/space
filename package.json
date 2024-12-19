@@ -3,11 +3,12 @@
     "three": "^0.171.0"
   },
   "scripts": {
-  "dev": "npx vite",
-  "build": "npx vite build",
-  "start": "npx vite preview"
-},
+    "dev": "npx vite",
+    "build": "npx vite build",
+    "start": "npx vite preview"
+  },
   "devDependencies": {
+    "serve": "^14.2.4",
     "vite": "^6.0.4"
   }
 }

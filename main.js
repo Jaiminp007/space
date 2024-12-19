@@ -17,8 +17,8 @@ const moveState = {
 
 const velocity = new THREE.Vector3();
 const maxSpeed = 0.5;
-const acceleration = 0.1;
-const deceleration = 0.1;
+const acceleration = 0.10;
+const deceleration = 0.98;
 const rotationSpeed = 0.03;
 
 // Three.js core components
@@ -268,7 +268,7 @@ function updateSpaceshipMovement() {
         velocity.addScaledVector(direction, -acceleration);
     }
     
-    spaceship.position.y += verticalMovement * (acceleration + 0.07);
+    spaceship.position.y += verticalMovement * (acceleration + 0.02);
 
     velocity.clampLength(0, maxSpeed);
     spaceship.position.add(velocity);
@@ -290,13 +290,16 @@ function checkProximity() {
   const spaceshipPosition = spaceship.position.clone();
 
   planets.forEach(planet => {
-      const planetPosition = planet.mesh.userData.actualPosition.clone();
+      const planetPosition = planet.mesh.position.clone(); // Get the planet's position in world space
       const distance = spaceshipPosition.distanceTo(planetPosition);
 
-      if (distance < 20) { // Adjust the threshold as needed
+      // Use a larger threshold based on your scene size, e.g., 30 units
+      const proximityThreshold = 30;
+
+      if (distance < proximityThreshold) { 
           const planetName = planet.name;
 
-          // Redirect to corresponding page
+          // Redirect to corresponding page if within proximity
           switch (planetName) {
               case 'about-me':
                   window.location.href = './planets/about.html';
@@ -311,6 +314,7 @@ function checkProximity() {
       }
   });
 }
+
 
 
 // Enhanced animation loop

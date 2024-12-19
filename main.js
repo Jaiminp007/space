@@ -1,163 +1,260 @@
-// Three.js setup
+// Import Three.js and supporting modules
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
 
+// Constants for spaceship movement
+const moveState = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  up: false,
+  down: false,
+};
+const velocity = new THREE.Vector3();
+const maxSpeed = 0.5;
+const acceleration = 0.02;
+const deceleration = 0.98;
+const rotationSpeed = 0.03;
 
-let mixer; // Animation mixer
-let animations;
-
+// Three.js core components
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('#space-scene') });
+const clock = new THREE.Clock();
 
+let mixer, spaceship, animations;
+const planets = [];
+
+// Renderer setup
 renderer.setSize(window.innerWidth, window.innerHeight);
+scene.background = new THREE.Color(0x000011); // Space-like background color
 document.body.appendChild(renderer.domElement);
 
-// Background color (dark space-like color)
-scene.background = new THREE.Color(0x000011);
+// Lighting setup
+function setupLighting() {
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  scene.add(ambientLight);
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambientLight);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+  directionalLight.position.set(10, 10, 10);
+  scene.add(directionalLight);
+}
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(10, 10, 10);
-scene.add(directionalLight);
+// Planet setup
+function createPlanets() {
+  const planetData = [
+    { name: 'about-me', color: 0x00ff00, position: [30, 0, -50], size: 3 },
+    { name: 'projects', color: 0x0000ff, position: [50, 5, -70], size: 3 },
+    { name: 'contact', color: 0xff0000, position: [70, -5, -90], size: 3 },
+  ];
 
-// Create the Sun
-const sunGeometry = new THREE.SphereGeometry(10, 32, 32); // Increased from 3 to 10
-const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-sun.position.set(0, 0, -100); // Moved further back to accommodate larger size
-scene.add(sun);
+  planetData.forEach((data) => {
+    const geometry = new THREE.SphereGeometry(data.size, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ color: data.color });
+    const planet = new THREE.Mesh(geometry, material);
+    planet.position.set(...data.position);
+    planet.userData = { name: data.name };
+    planets.push(planet);
+    scene.add(planet);
+  });
+}
 
-// Create Planets
-const planets = [];
-const planetData = [
-  { name: 'about-me', color: 0x00ff00, position: [30, 0, -50], size: 3 }, // Increased size
-  { name: 'projects', color: 0x0000ff, position: [50, 5, -70], size: 3 }, // Increased size
-  { name: 'contact', color: 0xff0000, position: [70, -5, -90], size: 3 }, // Increased size
-];
-
-planetData.forEach((data) => {
-  const geometry = new THREE.SphereGeometry(data.size, 32, 32); // Use dynamic size
-  const material = new THREE.MeshBasicMaterial({ color: data.color });
-  const planet = new THREE.Mesh(geometry, material);
-  planet.position.set(...data.position);
-  planet.userData = { name: data.name };
-  planets.push(planet);
-  scene.add(planet);
-});
-
-// Load Spaceship
-const loader = new GLTFLoader();
-let spaceship;
-
-loader.load(
+function loadSpaceship() {
+  const loader = new GLTFLoader();
+  loader.load(
     './models/spaceship.glb',
     (gltf) => {
       spaceship = gltf.scene;
       spaceship.position.set(0, 0, 0);
       spaceship.scale.set(0.1, 0.1, 0.1);
-      spaceship.rotation.y = Math.PI / 2;
+
+      // Set spaceship to face forward (-Z axis)
+      spaceship.rotation.y = 0; // Ensure facing forward
+
       scene.add(spaceship);
-  
-      // Check and set up animations
+
+      // Animation setup
       if (gltf.animations && gltf.animations.length) {
-        // Create an animation mixer
         mixer = new AnimationMixer(spaceship);
         animations = gltf.animations;
-  
-        // Play the first animation by default
         const action = mixer.clipAction(animations[0]);
         action.play();
-  
-        // If you want to log available animations
-        console.log('Available animations:', animations.map(clip => clip.name));
       }
     },
     undefined,
     (error) => {
-      console.error('An error occurred while loading the spaceship model:', error);
+      console.error('Error loading spaceship model:', error);
     }
   );
-
-  // Adjust camera to accommodate larger objects
-  camera.position.set(0, 10, 50);
-
-// Update camera to follow spaceship more closely
-function updateCamera() {
-  if (spaceship) {
-    camera.position.set(
-      spaceship.position.x,
-      spaceship.position.y + 3, // Slightly above the spaceship
-      spaceship.position.z +10 // Closer behind the spaceship
-    );
-    camera.lookAt(spaceship.position);
-  }
 }
 
-const clock = new THREE.Clock();
+let verticalMovement = 0; // Track the vertical movement
+let canScroll = true;  // Flag to prevent continuous movement within the timeout
+let scrollTimeout = null; // Track the vertical movement
 
-// Animation Loop
-function animate() {
-    // Get the time delta
-    const delta = clock.getDelta();
-  
-    // Update the animation mixer if it exists
-    if (mixer) {
-      mixer.update(delta);
+window.addEventListener('wheel', (event) => {
+  if (canScroll) {
+    // Only allow vertical movement within the range of verticalLimit
+    if (event.deltaY < 0) {
+      // Scroll up, move spaceship upwards (increase Y)
+      verticalMovement = 1; // Start moving upwards
+    } else if (event.deltaY > 0) {
+      // Scroll down, move spaceship downwards (decrease Y)
+      verticalMovement = -1; // Start moving downwards
     }
-  
-    updateCamera();
-    renderer.render(scene, camera);
-    requestAnimationFrame(animate);
-}
 
-animate();
+    // Prevent further scrolling for 0.5 seconds
+    canScroll = false;
 
-// Keyboard Controls for Spaceship Movement
-window.addEventListener('keydown', (event) => {
-  if (!spaceship) return; // Wait until the spaceship is loaded
-
-  const speed = 0.5;
-  switch(event.key) {
-    case 'ArrowUp':
-      spaceship.position.z -= speed; // Move forward
-      break;
-    case 'ArrowDown':
-      spaceship.position.z += speed; // Move backward
-      break;
-    case 'ArrowLeft':
-      spaceship.position.x -= speed; // Move left
-      break;
-    case 'ArrowRight':
-      spaceship.position.x += speed; // Move right
-      break;
-    case 'w':
-    case 'W':
-      spaceship.position.y += speed; // Move up
-      break;
-    case 's':
-    case 'S':
-      spaceship.position.y -= speed; // Move down
-      break;
+    // Set a timeout to reset vertical movement after 0.5 seconds
+    clearTimeout(scrollTimeout); // Clear the previous timeout if any
+    scrollTimeout = setTimeout(() => {
+      verticalMovement = 0;  // Stop vertical movement after 0.5 seconds
+      canScroll = true;  // Allow scrolling again
+    }, 1000); // 500ms = 0.5 seconds
   }
-
-  // Proximity Detection with Planets
-  planets.forEach((planet) => {
-    const distance = spaceship.position.distanceTo(planet.position);
-    if (distance < 2) {
-      console.log(`Approaching planet: ${planet.userData.name}`);
-      window.location.href = `/control-room?planet=${planet.userData.name}`; // Redirect to control room
-    }
-  });
 });
 
-// Adjust Renderer on Window Resize
+
+// Update spaceship movement and handle planet proximity
+let proximityTriggered = false; // Debounce for proximity detection
+function updateSpaceshipMovement() {
+  if (!spaceship) return;
+
+  // Handle rotation
+  if (moveState.rotateLeft) spaceship.rotation.y += rotationSpeed;
+  if (moveState.rotateRight) spaceship.rotation.y -= rotationSpeed;
+
+  // Calculate movement direction (aligned with spaceship's orientation)
+  const direction = new THREE.Vector3(1, 0, 0);
+  direction.applyQuaternion(spaceship.quaternion);
+
+  // Apply movement
+  if (moveState.forward) {
+    velocity.addScaledVector(direction, acceleration);
+  }
+  if (moveState.backward) {
+    velocity.addScaledVector(direction, -acceleration);
+  }
+  // if (moveState.up) {
+  //   velocity.y += acceleration;
+  // }
+  // if (moveState.down) {
+  //   velocity.y -= acceleration;
+  // }
+  spaceship.position.y += verticalMovement * (acceleration + 0.05);
+
+  // Clamp velocity and update position
+  velocity.clampLength(0, maxSpeed);
+  spaceship.position.add(velocity);
+  velocity.multiplyScalar(deceleration);
+}
+
+
+// Update camera to follow the spaceship
+// Update camera to follow the spaceship dynamically
+function updateCamera() {
+  if (!spaceship) return;
+
+  // Camera follows behind the spaceship
+  const cameraOffset = new THREE.Vector3(10, 0, 0); // Adjust as needed for better view
+  cameraOffset.applyQuaternion(spaceship.quaternion);
+
+  const targetPosition = spaceship.position.clone().sub(cameraOffset); // Offset behind spaceship
+  camera.position.lerp(targetPosition, 0.1); // Smooth follow
+  camera.lookAt(spaceship.position);
+}
+
+
+
+// Animation loop
+function animate() {
+  const delta = clock.getDelta();
+
+  if (mixer) mixer.update(delta);
+
+  updateSpaceshipMovement();
+  updateCamera();
+  renderer.render(scene, camera);
+
+  requestAnimationFrame(animate);
+}
+
+// Handle keyboard input
+// Handle keyboard input
+function setupKeyboardControls() {
+  window.addEventListener('keydown', (event) => {
+    switch (event.key) {
+      case 'ArrowUp':
+      case 'w':
+        moveState.forward = true;
+        break;
+      case 'ArrowDown':
+      case 's':
+        moveState.backward = true;
+        break;
+      case 'ArrowLeft':
+      case 'a':
+        moveState.rotateLeft = true;  // Rotating left when left arrow is pressed
+        break;
+      case 'ArrowRight':
+      case 'd':
+        moveState.rotateRight = true; // Rotating right when right arrow is pressed
+        break;
+      case 'Shift':
+        moveState.up = true;
+        break;
+      case 'Control':
+        moveState.down = true;
+        break;
+    }
+  });
+
+  window.addEventListener('keyup', (event) => {
+    switch (event.key) {
+      case 'ArrowUp':
+      case 'w':
+        moveState.forward = false;
+        break;
+      case 'ArrowDown':
+      case 's':
+        moveState.backward = false;
+        break;
+      case 'ArrowLeft':
+      case 'a':
+        moveState.rotateLeft = false;
+        break;
+      case 'ArrowRight':
+      case 'd':
+        moveState.rotateRight = false;
+        break;
+      case 'Shift':
+        moveState.up = false;
+        break;
+      case 'Control':
+        moveState.down = false;
+        break;
+    }
+  });
+}
+
+
+// Handle window resize
 window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 });
+
+// Initialize scene
+function init() {
+  setupLighting();
+  createPlanets();
+  loadSpaceship();
+  setupKeyboardControls();
+  animate();
+}
+
+init();
